@@ -289,16 +289,23 @@ class CamShow(QMainWindow,Ui_CamShow):
         _index = [i for i in range(2560)]
         self.SavePixel_arr[:,0] = np.array(_index)
         self.SavePixel_arr[:,1] = Gray_arr[:,0]
-
-        
+ 
         self.avg = int(self.Avg_logout.text()) #user輸入平均次數
-        
+
         # 如果 getPixel_arr的長度大於10，就把第一筆資料刪除，固定只存10筆資料
         if len(self.getPixel_arr) >= self.avg:
             self.getPixel_arr.pop(0)
         self.getPixel_arr.append(self.SavePixel_arr)
+
+        self.add_arr = np.zeros((2560,1),dtype=np.float16) #add_arr=[] 存getPixel_arr相加的值
+        for arr2 in self.getPixel_arr:
+            for ii in range(2560):
+                self.add_arr[ii,0] = np.add(self.add_arr[ii,0], arr2[ii,1])
+        
+        self.AvgGray_arr = np.zeros((2560,1),dtype=np.float16)
+        for i in range(2560):
+            self.AvgGray_arr[i,0] = np.add_arr[ii,0] / self.avg
             
-    
 
         x = np.linspace(0,2560,2560)
         self.draw_2.setRange(xRange=[0,2560]) # 固定x軸 不會拉動
@@ -307,11 +314,13 @@ class CamShow(QMainWindow,Ui_CamShow):
         self.draw_2.plot(x, r_arr[:,0] , pen='r')
         self.draw_2.plot(x, g_arr[:,0] , pen='g')
         self.draw_2.plot(x, b_arr[:,0] , pen='b')
-        self.draw_2.plot(x,Gray_arr[:,0],pen='w')
+        self.draw_2.plot(x,self.AvgGray_arrGray_arr[:,0],pen='w')
+        #self.draw_2.plot(x,Gray_arr[:,0],pen='w')
 
         if self.GrayCheck.isChecked():
             self.draw_2.clear()
-            self.draw_2.plot(x,Gray_arr[:,0],pen='w')
+            self.draw_2.plot(x,self.AvgGray_arrGray_arr[:,0],pen='w')
+            #self.draw_2.plot(x,Gray_arr[:,0],pen='w')
 
 
     def calculate(self):
@@ -468,9 +477,7 @@ class CamShow(QMainWindow,Ui_CamShow):
             x_0 = self.p0 * 0 + self.p1
             x_2560 =self.p0 * 2560 + self.p1
             _x = np.linspace(x_0,x_2560,2560)
-            #print( self.p0,self.p1,x_0)
-            #print(self.p0,self.p1,x_640)
-
+        
         if num == 2:
             #x_0 = self.p0 * 0 + self.p1 *0 + self.p2
             x_0 = math.pow(0,2)* self.p0 + self.p1 * 0 + self.p2
@@ -494,7 +501,7 @@ class CamShow(QMainWindow,Ui_CamShow):
             _x = np.linspace(x_0,x_2560,2560)
      
 
-        self.save_arr = np.zeros((2560,2),dtype=np.uint32)  # save_arr存波長及Gray_arr      
+        self.save_arr = np.zeros((2560,2),dtype=np.uint32)  # save_arr存pixel校正的波長及Gray_arr      
         for i in range(2560): 
             self.save_arr[i,1] = Gray_arr[i,0]
             if num == 1:
@@ -522,14 +529,14 @@ class CamShow(QMainWindow,Ui_CamShow):
                 self.y_arr[i,0] = np.add(self.y_arr[i,0], arr[i,1])
             
 
-        self.Gray_arr = np.zeros((2560,1),dtype=np.float16)  
+        self.AvgGray_arr = np.zeros((2560,1),dtype=np.float16)  
         for i in range(2560):
-            self.Gray_arr[i,0] = self.y_arr[i,0]/ self.avg
+            self.AvgGray_arr[i,0] = self.y_arr[i,0]/ self.avg
         
         
         self.draw_3.setRange(xRange=[0,x_2560]) # 固定x軸 不會拉動
         self.draw_3.setRange(yRange=[np.amin(Gray_arr),np.amax(Gray_arr)]) # 固定y軸 不會拉動    
-        self.draw_3.plot(_x,self.Gray_arr[:,0],pen='w')
+        self.draw_3.plot(_x,self.AvgGray_arr[:,0],pen='w')
         
     
     
@@ -537,9 +544,8 @@ class CamShow(QMainWindow,Ui_CamShow):
         fp = open('wavelength.txt' , 'w')
         fp2 = open('pixel.txt','w')
        
-
         # 以下: 存波長對強度 
-        self.y_arr = np.zeros((2560,1),dtype=np.float16)  #y_arr = [] #存 getSave_arr相加的值
+        self.y_arr = np.zeros((2560,1),dtype=np.float16)  #y_arr=[] #存 getSave_arr相加的值
         for arr in self.getSave_arr:
             for i in range(2560):
                 self.y_arr[i,0] = np.add(self.y_arr[i,0], arr[i,1])
@@ -548,22 +554,19 @@ class CamShow(QMainWindow,Ui_CamShow):
             fp.writelines(str(self.save_arr[i,0]) + ','+ str(self.y_arr[i,0]/self.avg) + '\n')
         
         # 以下:存pixcel對強度
-        self.add_arr = np.zeros((2560,1),dtype=np.float16)
+        self.add_arr = np.zeros((2560,1),dtype=np.float16) #add_arr=[] 存getPixel_arr相加的值
         for arr2 in self.getPixel_arr:
             for ii in range(2560):
                 self.add_arr[ii,0] = np.add(self.add_arr[ii,0], arr2[ii,1])
 
         for ii in range(2560):
             fp2.writelines(str(self.SavePixel_arr[ii,0]) + ',' + str(self.add_arr[ii,0]/self.avg) + '\n')
-            
-            
-            
-   
-          
+                   
         fp.close()
+        fp2.close()
         print('saving done!')
+    # 匯出的pixel和波長光譜數值，都是有平均過後的
     
-       
     def ExitApp(self):
         self.Timer.Stop()
         self.camera.release()
